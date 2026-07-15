@@ -1,0 +1,5 @@
+# Rails 8's default `rails new` ships rubocop-rails-omakase (DHH's house
+# style: no strict line length, double quotes, minimal ceremony). Adopting
+# the same default now so generated code doesn't need reformatting later.
+inherit_gem:
+  rubocop-rails-omakase: rubocop.yml

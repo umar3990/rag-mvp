@@ -5,6 +5,40 @@ Newest entry on top.
 
 ---
 
+## 2026-07-16 — Docker fixed, Postgres/pgvector running, PR workflow live
+
+**What got built:**
+- Fixed Docker Desktop: it was installed via a Rosetta-translated (Intel)
+  Homebrew at `/usr/local`, so `Hardware::CPU.arch` reported x86_64 on this
+  M1 and kept fetching the Intel build, which refuses to run. Removed it
+  entirely and installed the arm64 build directly from
+  desktop.docker.com — confirmed via `lipo -info` on the binary.
+- `docker compose up -d` now works. Remapped the `db` service to host port
+  `5433` (not `5432`) because another project's Postgres container
+  (`staft-postgres-1`) already owns 5432 on this machine.
+- Verified pgvector loads: `CREATE EXTENSION vector;` succeeded, version
+  0.8.5.
+- Set up the PR-based workflow requested: `CONTRIBUTING.md` (branch
+  naming, commit style, workflow steps), `.github/pull_request_template.md`,
+  a guarded CI workflow (`.github/workflows/ci.yml` — no-ops until a
+  Gemfile exists), and branch protection on `main` via `gh api`
+  (PR required, CI must pass, no force-push/delete).
+- Added README.md, .env.example, .rubocop.yml (rubocop-rails-omakase,
+  Rails 8's default), and two ADRs under docs/decisions/.
+- All of the above went through the new PR flow itself
+  (`chore/contributor-docs-and-ci` → PR #1) rather than a direct push,
+  to prove the workflow works before relying on it.
+
+**Why:**
+- Branch protection + required CI check means the workflow is enforced,
+  not just documented — matches the "senior engineering standards" ask.
+
+**Not done yet:**
+- `rails new` hasn't run yet — still no actual Rails app.
+- PR #1 not yet merged (CI should pass since all steps no-op currently).
+
+---
+
 ## 2026-07-15 — Personal GitHub account + Rails 8 install
 
 **What got built:**
