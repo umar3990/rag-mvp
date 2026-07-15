@@ -5,6 +5,49 @@ Newest entry on top.
 
 ---
 
+## 2026-07-16 (cont.) — `rails new`, Day 1 complete
+
+**What got built:**
+- Generated the Rails 8.1.3 app in a scratch directory (`rails new
+  rag-mvp-scaffold -d postgresql`), then merged it into this repo rather
+  than running `rails new` directly here — the repo already had
+  `README.md` / `.gitignore` / `.rubocop.yml` we'd written by hand, and
+  `rails new` would have hit interactive overwrite prompts on all three.
+- **Renamed the app** from `RagMvpScaffold`/`rag_mvp_scaffold` to
+  `RagMvp`/`rag_mvp` everywhere (`config/application.rb`, `database.yml`,
+  `deploy.yml`, `Dockerfile`, PWA manifest) — the scratch directory's name
+  leaked into Rails' generated module/database names by default.
+- Adopted Rails' generated `.gitignore` (more complete than our hand-rolled
+  one — ignores `log/*`, `tmp/*`, `storage/*`, `.bundle`, key files) and
+  added `!/.env.example` so the example template stays tracked even though
+  `/.env*` is ignored.
+- Adopted Rails' generated CI workflow instead of our placeholder — it runs
+  brakeman (security static analysis), bundler-audit, importmap audit,
+  rubocop, `rails test`, and system tests against a real Postgres service
+  container. Also added `.github/dependabot.yml` for automated dependency
+  PRs. Kept our own PR template (Rails doesn't generate one).
+- Added `dotenv-rails` gem (dev/test group) — Rails doesn't load `.env`
+  files by default, and the plan relies on `.env` for `DATABASE_URL` and
+  API keys. Without it, `.env.example` would've been decorative only.
+- Added the `neighbor` gem and ran `rails generate neighbor:vector`, which
+  created `db/migrate/..._install_neighbor_vector.rb` (`enable_extension
+  "vector"`). Ran `bin/rails db:prepare` — migration applied cleanly
+  against the pgvector container.
+- Verified end to end: `bundle exec rubocop` (0 offenses), `bin/rails
+  server` boots and serves `HTTP 200` on the default page, connected to
+  Postgres on port 5433 via `.env`'s `DATABASE_URL`.
+
+**Why:**
+- Doing `rails new` in a scratch dir + selective merge avoids fighting
+  interactive prompts while still keeping every hand-written doc from the
+  earlier PR.
+
+**Day 1 (Environment) is now complete** per CLAUDE.md's plan: git init +
+GitHub repo ✅, Docker Compose + pgvector ✅, `rails new` ✅, vector
+extension migration confirmed working ✅.
+
+---
+
 ## 2026-07-16 — Docker fixed, Postgres/pgvector running, PR workflow live
 
 **What got built:**
