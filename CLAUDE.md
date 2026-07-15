@@ -44,7 +44,7 @@ Multi-tenant billing, multiple LLM provider switching, executive dashboards, CRM
 
 ## Progress Tracker
 
-- [ ] Day 1 — Environment
+- [x] Day 1 — Environment
 - [ ] Day 2 — Auth & scaffolding
 - [ ] Day 3 — Document upload
 - [ ] Day 4 — Text extraction & chunking
