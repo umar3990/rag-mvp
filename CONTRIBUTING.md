@@ -20,10 +20,21 @@ obvious from the diff — mirrors the "why" emphasis in `CLAUDE.md`.
 
 1. Branch off `main`.
 2. Commit as you go.
-3. Open a PR using the template — fill in What / Why / How to test.
-4. CI (rubocop + tests) must pass.
-5. Merge via GitHub (squash merge keeps `main` history one-commit-per-PR).
+3. Before pushing/merging, run locally: `bundle exec rubocop` and
+   `bin/rails test` (both must be clean — this is instead of a CI gate,
+   see below).
+4. Open a PR using the template — fill in What / Why / How to test.
+5. Merge via GitHub (squash merge keeps `main` history one-commit-per-PR)
+   as soon as local checks are clean — no waiting on anything.
 6. Delete the branch after merge.
+
+**CI is disabled** (`.github/workflows/ci.yml`, `gh workflow disable`) —
+this is a solo project, and waiting several minutes per PR for a GitHub
+Actions runner to redo checks already run locally was pure latency with
+no second-reviewer benefit. Branch protection on `main` still requires a
+PR (no direct pushes), just not a passing status check. Re-enable with
+`gh workflow enable "CI"` if a second contributor ever joins, or before a
+real deploy, and re-add `required_status_checks` to branch protection.
 
 ## Code style
 
