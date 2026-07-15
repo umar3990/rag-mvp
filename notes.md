@@ -1,246 +1,56 @@
 # Notes — AI Business Automation Platform
 
-Running log of what got built, why, and any tradeoffs. One entry per session.
-Newest entry on top.
+Running log of what got built, why, and any tradeoffs. One entry per
+session. Newest entry on top.
+
+Older entries are archived under `docs/notes-archive/` once this file
+grows past a few sessions, to keep it cheap to read — see
+`docs/notes-archive/2026-07.md` for everything before this point.
 
 ---
 
-## 2026-07-16 (cont. 3) — Phase 2: auth + core models [CHECKPOINT]
+## 2026-07-16 (cont. 4) — Phase 2: signup + Tailwind UI [CHECKPOINT]
 
-**What got built (on branch `feat/auth-and-core-models`, not yet merged):**
-- Rails 8 built-in authentication (`bin/rails generate authentication`):
-  `User`, `Session`, `Current`, sign-in/out, password reset. No Devise.
-- `Organization` model: `name` required + unique. `has_many :users,
-  dependent: :restrict_with_error` (can't delete an org that still has
-  users — a safety rail, not a UX flow yet) and `has_many :documents,
-  dependent: :destroy`.
-- `User belongs_to :organization` (required). `Document belongs_to
-  :organization` (required) `belongs_to :user, optional: true` — the
-  uploader is audit metadata, not a hard requirement, so a document
-  survives its uploader's account being deleted (`dependent: :nullify` on
-  the User side).
-- Added a minimal `HomeController#index` as the root route (`root
-  "home#index"`) — every Rails app needs one, and the generated auth
-  concern redirects here after login. Placeholder only; Phase 4 replaces
-  it with the real UI. Protected by the same global
-  `before_action :require_authentication` every controller gets.
-- Wrote real tests for the new models (uniqueness, restrict-vs-nullify
-  behavior, required associations) rather than leaving the generated
-  empty test stubs.
-- **Found and fixed a real bug**: `.env`'s single `DATABASE_URL` was being
-  loaded by `dotenv-rails` in *both* development and test, so the test
-  suite was silently running against and truncating the *development*
-  database instead of an isolated test one. Fixed by adding `.env.test`
-  (dotenv-rails loads this instead of `.env` when `RAILS_ENV=test`),
-  pointing at a separate `rag_mvp_test` database. Added
-  `.env.test.example` as the committed template, same pattern as
-  `.env.example`. Verified: ran the full suite, confirmed dev stayed at 0
-  records afterward.
+**What got built (branch `feat/signup-and-ui`, not yet merged):**
+- Added `tailwindcss-rails` — signup, sign-in, password-reset, and the
+  placeholder dashboard now have a real styled UI (card-style forms, nav
+  bar, flash messages) instead of bare unstyled HTML.
+- `RegistrationsController` (`/registration`) — Rails 8's built-in auth
+  generator only ships sign-in/password-reset, not signup, by design (it
+  assumes you decide how accounts get created). Here, signup creates an
+  `Organization` and its first `User` together in one form/transaction
+  (relies on `has_many` autosave — building `@organization.users.new(...)`
+  then calling `@organization.save` saves and validates both records
+  together; confirmed by test, not just assumed).
+- Found and fixed two real bugs while verifying (not just trusting green
+  tests):
+  1. Flash messages rendered in a `<p>` tag; the generated
+     `PasswordsControllerTest` asserts `assert_select "div", ...` — 5
+     tests failed until fixed to `<div>`.
+  2. The Tailwind installer inserts a `stylesheet_link_tag "tailwind"`
+     into the layout; I'd overwritten the whole layout file with `Write`
+     afterward and clobbered that insertion, so the compiled CSS was
+     never actually linked — page had the right classes but zero styling.
+     Caught by checking the served CSS for our actual utility classes
+     (`grep` for `.rounded-md` etc. in the response), not just "does the
+     page 200."
+- Fixed a stale leftover: the layout's `<title>`/meta still said "Rag Mvp
+  Scaffold" from before the app was renamed on Day 1 — missed in that
+  earlier rename pass. Now "RAG Knowledge Assistant".
 
 **Why:**
-- Uploader-optional documents: the organization is the meaningful owner of
-  a document (it's the knowledge base), the uploading employee's account
-  being deleted later shouldn't cascade-delete institutional knowledge.
+- Verifying "does it actually render styled" required checking the served
+  asset content, not just HTTP 200 + passing tests — the CSS-not-linked
+  bug would have shipped invisibly past both.
 
-**State right now — not yet committed/pushed beyond one earlier commit:**
-- One commit already made+pending on `feat/auth-and-core-models`: the
-  authentication scaffold itself.
-- Organization/Document models, migrations, fixtures, tests, the
-  `.env.test` fix, and the Home controller are all done and passing
-  locally (20/20 tests, rubocop clean, system tests clean) but **not yet
-  committed** as of this checkpoint.
-- Next action: commit the remaining changes, push, open a PR, watch CI,
-  merge. Then Phase 2 is done and Phase 3 (RAG core: upload → chunk →
-  embed → search) is next.
+**State right now:**
+- All local checks pass: 23/23 tests, rubocop clean, system tests clean.
+- Manually confirmed via `curl`: signup page renders, compiled Tailwind
+  CSS is served and contains the classes the forms use.
+- **Not yet committed.** Next action: commit, push, open PR, watch CI,
+  merge. Then update `CLAUDE.md`'s progress tracker to check off Phase 2.
 
 **A fresh session can resume from here** by reading this entry + running
-`git status` on `feat/auth-and-core-models` to see the uncommitted state.
+`git status` on `feat/signup-and-ui`.
 
 ---
-
-## 2026-07-16 (cont. 2) — Plan pivot, CI fixes, test stubbing infra
-
-**What got built:**
-- Fixed two CI bugs discovered while getting the Rails-scaffold PR to pass:
-  the CI's Postgres service used the plain `postgres` image (no `vector`
-  extension — `enable_extension "vector"` failed), and `test/system/` was
-  never generated by `rails new` at all despite capybara/selenium being in
-  the Gemfile, so `test:system` couldn't even load. Fixed both, all 5 CI
-  checks green.
-- Rewrote `CLAUDE.md`: added a Vision section (the full "AI Business
-  Automation Platform" idea, kept as long-term context, not a build
-  target), replaced the Day-by-Day plan with a 6-phase plan centered on a
-  Gmail-triggered customer support agent pipeline (the RAG core becomes
-  its "Knowledge Base" step, not a separate product), added a
-  "concept before code" rule to the working agreement. Recorded the
-  reasoning as `docs/decisions/0003-...md`.
-- Added `webmock` + `vcr` (test group) — blocks real HTTP in tests, records
-  real API responses once into committed cassettes
-  (`test/vcr_cassettes/`), replays them after. Configured to filter
-  `ANTHROPIC_API_KEY`/`OPENAI_API_KEY` out of anything recorded, so
-  cassettes are safe to commit.
-- Added a "Secrets & credentials" section to `CONTRIBUTING.md`: `.env` for
-  local dev convenience vs. Rails encrypted credentials for anything the
-  deployed app needs — this project now touches three external secrets
-  (LLM key, Gmail OAuth, n8n auth) instead of one, worth being explicit.
-
-**Why:**
-- Test stubbing had to land before Phase 3 (embeddings calls) or Phase 5
-  (Gmail calls) start, not after — retrofitting it once real API-calling
-  code exists is much more painful than setting the pattern now.
-
-**Not done yet:**
-- Phase 2 (auth, User/Organization/Document models) hasn't started.
-
----
-
-## 2026-07-16 (cont.) — `rails new`, Day 1 complete
-
-**What got built:**
-- Generated the Rails 8.1.3 app in a scratch directory (`rails new
-  rag-mvp-scaffold -d postgresql`), then merged it into this repo rather
-  than running `rails new` directly here — the repo already had
-  `README.md` / `.gitignore` / `.rubocop.yml` we'd written by hand, and
-  `rails new` would have hit interactive overwrite prompts on all three.
-- **Renamed the app** from `RagMvpScaffold`/`rag_mvp_scaffold` to
-  `RagMvp`/`rag_mvp` everywhere (`config/application.rb`, `database.yml`,
-  `deploy.yml`, `Dockerfile`, PWA manifest) — the scratch directory's name
-  leaked into Rails' generated module/database names by default.
-- Adopted Rails' generated `.gitignore` (more complete than our hand-rolled
-  one — ignores `log/*`, `tmp/*`, `storage/*`, `.bundle`, key files) and
-  added `!/.env.example` so the example template stays tracked even though
-  `/.env*` is ignored.
-- Adopted Rails' generated CI workflow instead of our placeholder — it runs
-  brakeman (security static analysis), bundler-audit, importmap audit,
-  rubocop, `rails test`, and system tests against a real Postgres service
-  container. Also added `.github/dependabot.yml` for automated dependency
-  PRs. Kept our own PR template (Rails doesn't generate one).
-- Added `dotenv-rails` gem (dev/test group) — Rails doesn't load `.env`
-  files by default, and the plan relies on `.env` for `DATABASE_URL` and
-  API keys. Without it, `.env.example` would've been decorative only.
-- Added the `neighbor` gem and ran `rails generate neighbor:vector`, which
-  created `db/migrate/..._install_neighbor_vector.rb` (`enable_extension
-  "vector"`). Ran `bin/rails db:prepare` — migration applied cleanly
-  against the pgvector container.
-- Verified end to end: `bundle exec rubocop` (0 offenses), `bin/rails
-  server` boots and serves `HTTP 200` on the default page, connected to
-  Postgres on port 5433 via `.env`'s `DATABASE_URL`.
-
-**Why:**
-- Doing `rails new` in a scratch dir + selective merge avoids fighting
-  interactive prompts while still keeping every hand-written doc from the
-  earlier PR.
-
-**Day 1 (Environment) is now complete** per CLAUDE.md's plan: git init +
-GitHub repo ✅, Docker Compose + pgvector ✅, `rails new` ✅, vector
-extension migration confirmed working ✅.
-
----
-
-## 2026-07-16 — Docker fixed, Postgres/pgvector running, PR workflow live
-
-**What got built:**
-- Fixed Docker Desktop: it was installed via a Rosetta-translated (Intel)
-  Homebrew at `/usr/local`, so `Hardware::CPU.arch` reported x86_64 on this
-  M1 and kept fetching the Intel build, which refuses to run. Removed it
-  entirely and installed the arm64 build directly from
-  desktop.docker.com — confirmed via `lipo -info` on the binary.
-- `docker compose up -d` now works. Remapped the `db` service to host port
-  `5433` (not `5432`) because another project's Postgres container
-  (`staft-postgres-1`) already owns 5432 on this machine.
-- Verified pgvector loads: `CREATE EXTENSION vector;` succeeded, version
-  0.8.5.
-- Set up the PR-based workflow requested: `CONTRIBUTING.md` (branch
-  naming, commit style, workflow steps), `.github/pull_request_template.md`,
-  a guarded CI workflow (`.github/workflows/ci.yml` — no-ops until a
-  Gemfile exists), and branch protection on `main` via `gh api`
-  (PR required, CI must pass, no force-push/delete).
-- Added README.md, .env.example, .rubocop.yml (rubocop-rails-omakase,
-  Rails 8's default), and two ADRs under docs/decisions/.
-- All of the above went through the new PR flow itself
-  (`chore/contributor-docs-and-ci` → PR #1) rather than a direct push,
-  to prove the workflow works before relying on it.
-
-**Why:**
-- Branch protection + required CI check means the workflow is enforced,
-  not just documented — matches the "senior engineering standards" ask.
-
-**Not done yet:**
-- `rails new` hasn't run yet — still no actual Rails app.
-- PR #1 not yet merged (CI should pass since all steps no-op currently).
-
----
-
-## 2026-07-15 — Personal GitHub account + Rails 8 install
-
-**What got built:**
-- New SSH key pair at `~/.ssh/umar_github_personal`, used ONLY for this repo.
-- New host alias in `~/.ssh/config`: `github.com-umar-personal` → points at
-  `github.com` using that key with `IdentitiesOnly yes` (forces SSH to use
-  only this key for that alias, ignoring any other keys loaded in the agent).
-- Local (not global) git identity set in this repo:
-  `git config --local user.name/user.email` → `Umar / umar.dev4973@gmail.com`.
-  Every other repo on this machine still uses the company identity
-  (`Omar Farooq / happytenant.ae`) because `--local` only writes to
-  `rag-mvp/.git/config`, never `~/.gitconfig`.
-- Remote added: `origin` → `git@github.com-umar-personal:umar3990/rag-mvp.git`
-  (the host alias, not plain `github.com`, is what routes this repo's
-  git traffic through the personal key instead of the default one).
-- Verified with `ssh -T git@github.com-umar-personal` → authenticated as
-  `umar3990`.
-- Installed Ruby 3.3.4 + Rails 8.1.3 into a dedicated rvm gemset
-  (`3.3.4@rag-mvp`), separate from the system default (`3.1.2`, Rails 7.1.5)
-  used by other projects. `.ruby-version` and `.ruby-gemset` files were added
-  to the repo root so rvm auto-switches into this gemset whenever you `cd`
-  into `rag-mvp/` (requires rvm's shell integration, which is already on for
-  this machine).
-- Wrote `docker-compose.yml`: one `db` service on `pgvector/pgvector:pg17`
-  (Postgres 17 with the `vector` extension pre-compiled in), exposing 5432,
-  with a named volume so data survives container restarts. Pinned to `pg17`
-  instead of `latest` so the Postgres version doesn't silently change under
-  us later.
-
-**Why:**
-- Per-repo SSH alias + `--local` git config is the standard way to run
-  multiple GitHub identities from one machine without a global switch that
-  could leak a personal commit into a company repo (or vice versa).
-- A dedicated rvm gemset avoids clobbering the Ruby/gem setup other projects
-  on this machine already rely on (system default is Rails 7.1.5).
-
-**Not done yet:**
-- `docker compose up -d` hasn't been run — container not started/verified.
-- `rails new` hasn't been run — no Rails app scaffolded yet.
-- Nothing has been pushed to GitHub yet (repo is empty on `umar3990/rag-mvp`).
-
----
-
-## 2026-07-14 — Day 1 kickoff: repo setup
-
-**What got built:**
-- Created `rag-mvp/` folder as the actual Rails app repo (kept separate from
-  the parent `ai-automation-learning/` folder, which just holds the project
-  brief in `CLAUDE.md`).
-- Ran `git init` inside `rag-mvp/` — default branch is `master` (git's
-  default on this machine; can rename to `main` later if you want).
-
-**Why:**
-- Keeping the Rails app in its own subfolder means the git history for the
-  app stays clean and only tracks app files, not planning docs.
-
-**Next up (still Day 1 per the plan in CLAUDE.md):**
-1. Create an empty GitHub repo and push this one to it, before writing any
-   app code — so history starts from commit zero.
-2. Add a `docker-compose.yml` using the `pgvector/pgvector` Postgres image
-   (Postgres + the `vector` extension baked in, so we don't have to install
-   pgvector by hand).
-3. `rails new` to scaffold the app.
-4. Write a migration enabling the `vector` extension, confirm it connects,
-   commit.
-
-**Concepts to understand before Day 1 is "done":**
-- Why pgvector instead of a separate vector DB (Pinecone, Weaviate, etc.) —
-  short version: one less service to run/pay for/keep in sync, and Postgres
-  can join vector search against your normal relational data (e.g. filter
-  by `organization_id`) in a single query.
-- What `git init` actually sets up locally (a `.git/` folder — no remote yet,
-  nothing is on GitHub until we add a remote and push).

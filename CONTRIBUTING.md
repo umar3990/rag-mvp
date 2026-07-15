@@ -62,5 +62,9 @@ and replays it on every subsequent run.
 
 - `CLAUDE.md` progress tracker — check off a day when its milestone lands.
 - `notes.md` — append an entry per session: what got built, why, tradeoffs.
+  Once it grows past ~4-5 sessions, move older entries into
+  `docs/notes-archive/YYYY-MM.md` (newest-first, same format), keeping
+  only recent entries in the live file — it gets read into context
+  regularly, so keeping it small keeps that cheap.
 - `docs/decisions/` — add a new numbered ADR for any non-obvious technical
   choice (why Postgres over X, why this chunking strategy, etc.).
