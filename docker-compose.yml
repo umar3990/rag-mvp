@@ -1,0 +1,17 @@
+services:
+  # pgvector/pgvector ships Postgres with the `vector` extension already
+  # compiled in, so we don't need to install pgvector by hand.
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rag_mvp
+      POSTGRES_PASSWORD: rag_mvp
+      POSTGRES_DB: rag_mvp_development
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
