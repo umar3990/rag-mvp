@@ -30,6 +30,34 @@ obvious from the diff — mirrors the "why" emphasis in `CLAUDE.md`.
 Rubocop config is `rubocop-rails-omakase` (Rails 8's default) — run
 `bundle exec rubocop -A` to auto-fix before opening a PR.
 
+## Secrets & credentials
+
+This project touches three external secrets: an LLM API key, Gmail OAuth
+credentials, and an n8n webhook auth token. Two different places to put
+them, depending on scope:
+
+- **`.env`** (gitignored, never committed) — local development
+  convenience. Loaded automatically via `dotenv-rails`. Copy
+  `.env.example` to `.env` and fill in real values. This is where your
+  personal dev API keys live.
+- **Rails encrypted credentials** (`config/credentials.yml.enc`, edited via
+  `bin/rails credentials:edit`) — anything that needs to exist in
+  *production*. The encryption key (`config/master.key`) is itself
+  gitignored and never committed; it's what Kamal reads at deploy time
+  (see `.kamal/secrets`).
+
+Rule of thumb: if it's a value you personally use to develop locally, it's
+`.env`. If it's a value the deployed app needs at runtime, it's Rails
+credentials. Never put a real secret directly in `docker-compose.yml`,
+`config/database.yml`, or any file that isn't gitignored — check
+`git status` after adding a new secret to make sure it landed somewhere
+ignored, not staged.
+
+Tests must never hit real external APIs (embeddings, Gmail) — see
+`test/test_helper.rb`'s VCR setup, which records a real response once into
+a cassette (`test/vcr_cassettes/`, committed, secrets auto-filtered out)
+and replays it on every subsequent run.
+
 ## Docs to keep in sync
 
 - `CLAUDE.md` progress tracker — check off a day when its milestone lands.

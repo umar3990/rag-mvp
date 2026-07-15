@@ -69,4 +69,10 @@ group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
+
+  # Blocks real HTTP requests during tests; VCR records real API responses
+  # once into a "cassette" and replays them on every future run, so tests
+  # against external APIs (embeddings, Gmail) are fast, free, and deterministic.
+  gem "webmock"
+  gem "vcr"
 end
