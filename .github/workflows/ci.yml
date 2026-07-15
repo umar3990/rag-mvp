@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    # Guards let this workflow merge cleanly now, before `rails new` has
+    # run — steps no-op until a Gemfile exists instead of failing the build.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for Gemfile
+        id: gemfile
+        run: echo "exists=$( [ -f Gemfile ] && echo true || echo false )" >> "$GITHUB_OUTPUT"
+
+      - uses: ruby/setup-ruby@v1
+        if: steps.gemfile.outputs.exists == 'true'
+        with:
+          ruby-version: '3.3.4'
+          bundler-cache: true
+
+      - name: Rubocop
+        if: steps.gemfile.outputs.exists == 'true'
+        run: bundle exec rubocop
+
+      - name: Tests
+        if: steps.gemfile.outputs.exists == 'true'
+        run: bin/rails test
