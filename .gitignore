@@ -7,9 +7,10 @@
 # Ignore bundler config.
 /.bundle
 
-# Ignore all environment files, except the example template (meant to be committed).
+# Ignore all environment files, except the example templates (meant to be committed).
 /.env*
 !/.env.example
+!/.env.test.example
 
 # Ignore all logfiles and tempfiles.
 /log/*

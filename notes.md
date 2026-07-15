@@ -5,6 +5,59 @@ Newest entry on top.
 
 ---
 
+## 2026-07-16 (cont. 3) — Phase 2: auth + core models [CHECKPOINT]
+
+**What got built (on branch `feat/auth-and-core-models`, not yet merged):**
+- Rails 8 built-in authentication (`bin/rails generate authentication`):
+  `User`, `Session`, `Current`, sign-in/out, password reset. No Devise.
+- `Organization` model: `name` required + unique. `has_many :users,
+  dependent: :restrict_with_error` (can't delete an org that still has
+  users — a safety rail, not a UX flow yet) and `has_many :documents,
+  dependent: :destroy`.
+- `User belongs_to :organization` (required). `Document belongs_to
+  :organization` (required) `belongs_to :user, optional: true` — the
+  uploader is audit metadata, not a hard requirement, so a document
+  survives its uploader's account being deleted (`dependent: :nullify` on
+  the User side).
+- Added a minimal `HomeController#index` as the root route (`root
+  "home#index"`) — every Rails app needs one, and the generated auth
+  concern redirects here after login. Placeholder only; Phase 4 replaces
+  it with the real UI. Protected by the same global
+  `before_action :require_authentication` every controller gets.
+- Wrote real tests for the new models (uniqueness, restrict-vs-nullify
+  behavior, required associations) rather than leaving the generated
+  empty test stubs.
+- **Found and fixed a real bug**: `.env`'s single `DATABASE_URL` was being
+  loaded by `dotenv-rails` in *both* development and test, so the test
+  suite was silently running against and truncating the *development*
+  database instead of an isolated test one. Fixed by adding `.env.test`
+  (dotenv-rails loads this instead of `.env` when `RAILS_ENV=test`),
+  pointing at a separate `rag_mvp_test` database. Added
+  `.env.test.example` as the committed template, same pattern as
+  `.env.example`. Verified: ran the full suite, confirmed dev stayed at 0
+  records afterward.
+
+**Why:**
+- Uploader-optional documents: the organization is the meaningful owner of
+  a document (it's the knowledge base), the uploading employee's account
+  being deleted later shouldn't cascade-delete institutional knowledge.
+
+**State right now — not yet committed/pushed beyond one earlier commit:**
+- One commit already made+pending on `feat/auth-and-core-models`: the
+  authentication scaffold itself.
+- Organization/Document models, migrations, fixtures, tests, the
+  `.env.test` fix, and the Home controller are all done and passing
+  locally (20/20 tests, rubocop clean, system tests clean) but **not yet
+  committed** as of this checkpoint.
+- Next action: commit the remaining changes, push, open a PR, watch CI,
+  merge. Then Phase 2 is done and Phase 3 (RAG core: upload → chunk →
+  embed → search) is next.
+
+**A fresh session can resume from here** by reading this entry + running
+`git status` on `feat/auth-and-core-models` to see the uncommitted state.
+
+---
+
 ## 2026-07-16 (cont. 2) — Plan pivot, CI fixes, test stubbing infra
 
 **What got built:**
