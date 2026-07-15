@@ -4,6 +4,8 @@ source "https://rubygems.org"
 gem "rails", "~> 8.1.3"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
+# Utility-first CSS, compiled at build time -- no Node/webpack needed [https://github.com/rails/tailwindcss-rails]
+gem "tailwindcss-rails"
 # Use postgresql as the database for Active Record
 gem "pg", "~> 1.1"
 # Nearest-neighbor search on pgvector columns [https://github.com/ankane/neighbor]

@@ -61,6 +61,12 @@ and replays it on every subsequent run.
 ## Docs to keep in sync
 
 - `CLAUDE.md` progress tracker — check off a day when its milestone lands.
-- `notes.md` — append an entry per session: what got built, why, tradeoffs.
+- `notes.md` — a checkpoint log for resuming cold, not documentation.
+  Append a *short* entry per session: what shipped (with PR numbers, not
+  re-explained detail), what's pending, and only decisions not already
+  captured in a commit message or ADR. A few bullets, not a narrative.
+  Once it grows past ~5 entries, move older ones into
+  `docs/notes-archive/YYYY-MM.md` (newest-first, same format) — it gets
+  read into context regularly, so keeping it small keeps that cheap.
 - `docs/decisions/` — add a new numbered ADR for any non-obvious technical
   choice (why Postgres over X, why this chunking strategy, etc.).

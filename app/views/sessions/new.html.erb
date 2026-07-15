@@ -1,11 +1,26 @@
-<%= tag.div(flash[:alert], style: "color:red") if flash[:alert] %>
-<%= tag.div(flash[:notice], style: "color:green") if flash[:notice] %>
+<% content_for :title, "Sign in" %>
 
-<%= form_with url: session_path do |form| %>
-  <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "username", placeholder: "Enter your email address", value: params[:email_address] %><br>
-  <%= form.password_field :password, required: true, autocomplete: "current-password", placeholder: "Enter your password", maxlength: 72 %><br>
-  <%= form.submit "Sign in" %>
-<% end %>
-<br>
+<div class="mx-auto max-w-sm">
+  <h1 class="text-xl font-semibold text-gray-900">Sign in</h1>
 
-<%= link_to "Forgot password?", new_password_path %>
+  <%= form_with url: session_path, class: "mt-6 space-y-4" do |form| %>
+    <div>
+      <%= form.label :email_address, "Email", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "username", value: params[:email_address],
+            class: "mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500" %>
+    </div>
+
+    <div>
+      <%= form.label :password, class: "block text-sm font-medium text-gray-700" %>
+      <%= form.password_field :password, required: true, autocomplete: "current-password", maxlength: 72,
+            class: "mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500" %>
+    </div>
+
+    <%= form.submit "Sign in", class: "w-full cursor-pointer rounded-md bg-gray-900 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-700" %>
+  <% end %>
+
+  <div class="mt-6 flex items-center justify-between text-sm">
+    <%= link_to "Forgot password?", new_password_path, class: "text-gray-500 hover:underline" %>
+    <%= link_to "Create a workspace", new_registration_path, class: "font-medium text-gray-900 hover:underline" %>
+  </div>
+</div>
