@@ -8,6 +8,36 @@ messages). Newest on top. Archive older entries to
 
 ---
 
+## 2026-07-16 (cont. 3) — Retry mechanism, live status via Turbo Streams
+
+- Shipped: `retry_on`/`discard_on` on `DocumentProcessingJob` (transient
+  errors retry with backoff; permanent ones like unsupported file type
+  fail immediately). Manual "Retry" button (index + show) for
+  permanently-failed documents. `broadcasts_to`/`broadcasts_refreshes` so
+  index/show pages update live over Turbo Streams instead of needing a
+  manual reload.
+- Fixed two real bugs found while verifying against the user's actual
+  uploads (not just the test suite):
+  1. `retry_on`/`discard_on` handlers are searched bottom-to-top (most
+     recently declared wins) — had `discard_on` declared *before*
+     `retry_on StandardError`, so the generic handler always matched
+     first and nothing ever reached the specific one. Reordered.
+  2. Action Cable was never mounted (`/cable` 404'd) — Rails 8.1's
+     auto-mount didn't kick in here for reasons not fully chased down;
+     added `mount ActionCable.server => "/cable"` explicitly in
+     routes.rb.
+- Also fixed: chunk content was truncated to 300 chars on the show page,
+  which read as "extraction is incomplete" when it wasn't — direct
+  backend inspection confirmed chunking is correct (verified against a
+  real resume upload: 808 words, 2 overlapping chunks, zero gaps).
+- Pending: user still needs to restart their local server to pick up the
+  cable mount fix and confirm live updates actually work end to end in
+  the browser (no browser automation tooling available in this
+  environment to verify directly). Deferred per user's call — moving to
+  embeddings next.
+
+---
+
 ## 2026-07-16 (cont. 2) — Text extraction + chunking; deferred a pg segfault
 
 - Shipped: `TextExtractor` (PDF via pdf-reader, plain text), `TextChunker`

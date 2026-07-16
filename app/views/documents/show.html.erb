@@ -1,5 +1,7 @@
 <% content_for :title, @document.title %>
 
+<%= turbo_stream_from @document %>
+
 <%= link_to "← Documents", documents_path, class: "text-sm text-gray-500 hover:underline" %>
 
 <div class="mt-4 rounded-lg border border-gray-200 bg-white p-6">
@@ -13,6 +15,11 @@
   <p class="mt-1 text-sm text-gray-500">
     <%= @document.file.filename %> (<%= number_to_human_size(@document.file.byte_size) %>)
   </p>
+
+  <% if @document.failed? %>
+    <%= button_to "Retry", retry_document_path(@document), method: :post,
+          class: "mt-4 rounded-md bg-gray-900 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-700" %>
+  <% end %>
 </div>
 
 <% if @document.completed? %>
@@ -22,7 +29,7 @@
       <% @document.chunks.each do |chunk| %>
         <div class="rounded-lg border border-gray-200 bg-white p-4">
           <p class="text-xs font-medium text-gray-400">#<%= chunk.position %></p>
-          <p class="mt-1 text-sm text-gray-700"><%= truncate(chunk.content, length: 300) %></p>
+          <p class="mt-1 whitespace-pre-wrap text-sm text-gray-700"><%= chunk.content %></p>
         </div>
       <% end %>
     </div>

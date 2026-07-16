@@ -8,6 +8,13 @@ class Document < ApplicationRecord
 
   enum :status, { pending: "pending", processing: "processing", completed: "completed", failed: "failed" }, default: :pending
 
+  # Live-updates the index page's row for this document over Turbo Streams
+  # whenever it changes (partial: app/views/documents/_document.html.erb).
+  broadcasts_to ->(document) { [ document.organization, :documents ] }
+  # Tells any open show page for this document to smart-refresh itself
+  # when it changes -- no bespoke partial needed for the detail view.
+  broadcasts_refreshes
+
   validates :title, presence: true
   validate :file_is_present_and_acceptable
 

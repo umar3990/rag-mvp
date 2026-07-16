@@ -1,5 +1,6 @@
 class DocumentsController < ApplicationController
-  before_action :set_document, only: %i[ show ]
+  before_action :set_document, only: %i[ show retry ]
+  helper_method :current_organization
 
   def index
     @documents = current_organization.documents.order(created_at: :desc)
@@ -21,6 +22,16 @@ class DocumentsController < ApplicationController
   end
 
   def show
+  end
+
+  def retry
+    unless @document.failed?
+      return redirect_to document_path(@document), alert: "Only failed documents can be retried."
+    end
+
+    DocumentProcessingJob.mark_status(@document, :pending)
+    DocumentProcessingJob.perform_later(@document)
+    redirect_to document_path(@document), notice: "Retrying — processing in the background."
   end
 
   private
