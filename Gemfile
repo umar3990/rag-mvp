@@ -43,6 +43,8 @@ gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 1.2"
+# Extract text from uploaded PDFs [https://github.com/yob/pdf-reader]
+gem "pdf-reader"
 
 group :development, :test do
   # Loads .env into ENV so DATABASE_URL / API keys don't need to be
@@ -77,4 +79,8 @@ group :test do
   # against external APIs (embeddings, Gmail) are fast, free, and deterministic.
   gem "webmock"
   gem "vcr"
+
+  # Generates a real PDF at test time so text-extraction specs exercise
+  # actual PDF parsing instead of a mocked reader.
+  gem "prawn"
 end

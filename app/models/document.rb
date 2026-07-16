@@ -4,6 +4,7 @@ class Document < ApplicationRecord
   belongs_to :organization
   belongs_to :user, optional: true
   has_one_attached :file
+  has_many :chunks, -> { order(:position) }, dependent: :destroy
 
   enum :status, { pending: "pending", processing: "processing", completed: "completed", failed: "failed" }, default: :pending
 

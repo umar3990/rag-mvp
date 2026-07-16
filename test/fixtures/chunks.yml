@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  document: one
+  organization: one
+  content: MyText
+  position: 1
+
+two:
+  document: two
+  organization: two
+  content: MyText
+  position: 1

@@ -20,36 +20,27 @@ default: &default
   max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
 
 
+# Solid Queue needs its own DB connection ("queue") even in development,
+# since it's configured as the real ActiveJob adapter locally (not just
+# production) -- see config/environments/development.rb. Same physical
+# database as primary, just a separate connection/migration path, matching
+# the production pattern below.
+#
+# Both connections set `url:` explicitly to DATABASE_URL -- Rails only
+# auto-applies DATABASE_URL to a connection literally named "primary";
+# any other named connection silently falls back to the adapter's default
+# host/port (localhost:5432) if not given its own url/host/port. On this
+# machine that default port has an unrelated native Postgres install
+# listening on it, so "queue" was silently creating its tables there
+# instead of in our actual dev database until this was made explicit.
 development:
-  <<: *default
-  database: rag_mvp_development
-
-  # The specified database role being used to connect to PostgreSQL.
-  # To create additional roles in PostgreSQL see `$ createuser --help`.
-  # When left blank, PostgreSQL will use the default role. This is
-  # the same name as the operating system user running Rails.
-  #username: rag_mvp
-
-  # The password associated with the PostgreSQL role (username).
-  #password:
-
-  # Connect on a TCP socket. Omitted by default since the client uses a
-  # domain socket that doesn't need configuration. Windows does not have
-  # domain sockets, so uncomment these lines.
-  #host: localhost
-
-  # The TCP port the server listens on. Defaults to 5432.
-  # If your server runs on a different port number, change accordingly.
-  #port: 5432
-
-  # Schema search path. The server defaults to $user,public
-  #schema_search_path: myapp,sharedapp,public
-
-  # Minimum log levels, in increasing order:
-  #   debug5, debug4, debug3, debug2, debug1,
-  #   log, notice, warning, error, fatal, and panic
-  # Defaults to warning.
-  #min_messages: notice
+  primary:
+    <<: *default
+    url: <%= ENV.fetch("DATABASE_URL") %>
+  queue:
+    <<: *default
+    url: <%= ENV.fetch("DATABASE_URL") %>
+    migrations_paths: db/queue_migrate
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".

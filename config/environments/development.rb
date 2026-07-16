@@ -31,6 +31,12 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
+  # Default :async adapter (in-process thread pool, no separate worker
+  # process needed) -- `bin/jobs`/real Solid Queue hit a segfault in the
+  # native pg gem under concurrent connections on this machine. Deferred,
+  # see docs/decisions/0006. Production is unaffected (configured
+  # separately below in production.rb).
+
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false
 

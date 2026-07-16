@@ -14,3 +14,17 @@
     <%= @document.file.filename %> (<%= number_to_human_size(@document.file.byte_size) %>)
   </p>
 </div>
+
+<% if @document.completed? %>
+  <div class="mt-6">
+    <h2 class="text-sm font-semibold text-gray-900"><%= pluralize(@document.chunks.count, "chunk") %></h2>
+    <div class="mt-3 space-y-3">
+      <% @document.chunks.each do |chunk| %>
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+          <p class="text-xs font-medium text-gray-400">#<%= chunk.position %></p>
+          <p class="mt-1 text-sm text-gray-700"><%= truncate(chunk.content, length: 300) %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
