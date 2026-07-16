@@ -53,4 +53,17 @@ class DocumentsControllerTest < ActionDispatch::IntegrationTest
     get document_path(documents(:two))
     assert_response :not_found
   end
+
+  test "show displays extracted chunks once processing is complete" do
+    document = Document.create!(
+      title: "Handbook", organization: @user.organization,
+      file: { io: StringIO.new("hello from a chunked document"), filename: "note.txt", content_type: "text/plain" }
+    )
+    perform_enqueued_jobs only: DocumentProcessingJob
+
+    get document_path(document)
+
+    assert_response :success
+    assert_match "hello from a chunked document", response.body
+  end
 end
