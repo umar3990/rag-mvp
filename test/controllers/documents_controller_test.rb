@@ -66,4 +66,34 @@ class DocumentsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "hello from a chunked document", response.body
   end
+
+  test "retry re-enqueues processing for a failed document" do
+    document = Document.create!(
+      title: "Handbook", organization: @user.organization,
+      file: { io: StringIO.new("hello"), filename: "note.txt", content_type: "text/plain" }
+    )
+    document.update_column(:status, :failed)
+
+    assert_enqueued_with(job: DocumentProcessingJob) do
+      post retry_document_path(document)
+    end
+
+    assert_redirected_to document_path(document)
+    assert document.reload.pending?
+  end
+
+  test "retry refuses a document that isn't failed" do
+    document = Document.create!(
+      title: "Handbook", organization: @user.organization,
+      file: { io: StringIO.new("hello"), filename: "note.txt", content_type: "text/plain" }
+    )
+    document.update_column(:status, :completed)
+
+    assert_no_enqueued_jobs only: DocumentProcessingJob do
+      post retry_document_path(document)
+    end
+
+    assert_redirected_to document_path(document)
+    assert document.reload.completed?
+  end
 end

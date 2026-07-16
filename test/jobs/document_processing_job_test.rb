@@ -15,7 +15,20 @@ class DocumentProcessingJobTest < ActiveJob::TestCase
     assert_equal 0, document.chunks.first.position
   end
 
-  test "marks the document failed and re-raises when extraction errors" do
+  test "discards immediately for a permanently unsupported content type" do
+    document = Document.new(title: "Bad upload", organization: organizations(:one))
+    document.file.attach(io: StringIO.new("<html></html>"), filename: "page.html", content_type: "text/html")
+    document.save!(validate: false)
+
+    # discard_on catches the error and marks failed without raising or
+    # scheduling a retry -- an unsupported file type will never succeed
+    # no matter how many times we try it.
+    DocumentProcessingJob.perform_now(document)
+
+    assert document.reload.failed?
+  end
+
+  test "retries on a transient error instead of failing immediately" do
     document = Document.create!(
       title: "Handbook", organization: organizations(:one),
       file: { io: StringIO.new("hello"), filename: "note.txt", content_type: "text/plain" }
@@ -24,11 +37,16 @@ class DocumentProcessingJobTest < ActiveJob::TestCase
     original_method = TextExtractor.method(:call)
     begin
       TextExtractor.define_singleton_method(:call) { |*| raise "boom" }
-      assert_raises(RuntimeError) { DocumentProcessingJob.perform_now(document) }
+
+      assert_enqueued_with(job: DocumentProcessingJob) do
+        DocumentProcessingJob.perform_now(document)
+      end
     ensure
       TextExtractor.define_singleton_method(:call, original_method)
     end
 
-    assert document.reload.failed?
+    # Still "processing", not "failed" -- the failed status only gets set
+    # once every retry attempt is exhausted, not on the first failure.
+    assert document.reload.processing?
   end
 end
