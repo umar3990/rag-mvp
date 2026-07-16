@@ -7,12 +7,18 @@ class DocumentProcessingJobTest < ActiveJob::TestCase
       file: { io: StringIO.new((1..1200).map { |n| "word#{n}" }.join(" ")), filename: "handbook.txt", content_type: "text/plain" }
     )
 
-    DocumentProcessingJob.perform_now(document)
+    # Real embedding calls hit the local Ollama server -- record: :once
+    # (test_helper.rb) means this only touches the network the first time;
+    # every run after that replays the committed cassette.
+    VCR.use_cassette("document_processing_job/embeds_chunks") do
+      DocumentProcessingJob.perform_now(document)
+    end
 
     document.reload
     assert document.completed?
     assert_equal 3, document.chunks.count
     assert_equal 0, document.chunks.first.position
+    assert_equal 768, document.chunks.first.embedding.size
   end
 
   test "discards immediately for a permanently unsupported content type" do

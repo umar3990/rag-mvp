@@ -59,7 +59,9 @@ class DocumentsControllerTest < ActionDispatch::IntegrationTest
       title: "Handbook", organization: @user.organization,
       file: { io: StringIO.new("hello from a chunked document"), filename: "note.txt", content_type: "text/plain" }
     )
-    perform_enqueued_jobs only: DocumentProcessingJob
+    VCR.use_cassette("documents_controller/show_displays_chunks") do
+      perform_enqueued_jobs only: DocumentProcessingJob
+    end
 
     get document_path(document)
 

@@ -17,3 +17,10 @@ services:
 
 volumes:
   db_data:
+
+# Embeddings: Ollama is intentionally NOT run here. It runs as a native
+# arm64 binary + launchd service on the host instead -- see notes.md
+# ("Embeddings: local via Ollama") for why the Docker route was abandoned
+# (Docker Desktop VM disk corruption, then an exec format error even after
+# a clean re-pull). Rails talks to it over HTTP at localhost:11434 either
+# way, so nothing in the app code cares which one is running it.
