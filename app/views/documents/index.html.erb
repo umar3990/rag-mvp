@@ -1,0 +1,28 @@
+<% content_for :title, "Documents" %>
+
+<div class="flex items-center justify-between">
+  <h1 class="text-lg font-semibold text-gray-900">Documents</h1>
+  <%= link_to "Upload", new_document_path, class: "rounded-md bg-gray-900 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-700" %>
+</div>
+
+<div class="mt-6 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+  <% if @documents.empty? %>
+    <p class="p-6 text-sm text-gray-500">No documents yet.</p>
+  <% end %>
+
+  <% @documents.each do |document| %>
+    <%= link_to document_path(document), class: "flex items-center justify-between p-4 hover:bg-gray-50" do %>
+      <div>
+        <p class="text-sm font-medium text-gray-900"><%= document.title %></p>
+        <p class="text-xs text-gray-500">
+          Uploaded <%= time_ago_in_words(document.created_at) %> ago
+          <% if document.user %> by <%= document.user.email_address %><% end %>
+        </p>
+      </div>
+      <span class="rounded-full px-2 py-1 text-xs font-medium
+        <%= document.completed? ? "bg-green-50 text-green-700" : document.failed? ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-600" %>">
+        <%= document.status %>
+      </span>
+    <% end %>
+  <% end %>
+</div>
