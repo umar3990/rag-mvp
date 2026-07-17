@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_16_154228) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_17_052822) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -56,6 +56,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_154228) do
     t.index ["organization_id"], name: "index_chunks_on_organization_id"
   end
 
+  create_table "conversations", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "organization_id", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["organization_id"], name: "index_conversations_on_organization_id"
+    t.index ["user_id"], name: "index_conversations_on_user_id"
+  end
+
   create_table "documents", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "organization_id", null: false
@@ -65,6 +74,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_154228) do
     t.bigint "user_id"
     t.index ["organization_id"], name: "index_documents_on_organization_id"
     t.index ["user_id"], name: "index_documents_on_user_id"
+  end
+
+  create_table "message_sources", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "document_id", null: false
+    t.bigint "message_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["document_id"], name: "index_message_sources_on_document_id"
+    t.index ["message_id", "document_id"], name: "index_message_sources_on_message_id_and_document_id", unique: true
+    t.index ["message_id"], name: "index_message_sources_on_message_id"
+  end
+
+  create_table "messages", force: :cascade do |t|
+    t.text "content", null: false
+    t.bigint "conversation_id", null: false
+    t.datetime "created_at", null: false
+    t.boolean "escalated", default: false, null: false
+    t.string "role", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_id"], name: "index_messages_on_conversation_id"
   end
 
   create_table "organizations", force: :cascade do |t|
@@ -218,8 +247,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_154228) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "chunks", "documents"
   add_foreign_key "chunks", "organizations"
+  add_foreign_key "conversations", "organizations"
+  add_foreign_key "conversations", "users"
   add_foreign_key "documents", "organizations"
   add_foreign_key "documents", "users"
+  add_foreign_key "message_sources", "documents"
+  add_foreign_key "message_sources", "messages"
+  add_foreign_key "messages", "conversations"
   add_foreign_key "sessions", "users"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

@@ -1,0 +1,14 @@
+<% content_for :title, "Conversation" %>
+
+<%= link_to "← Conversations", conversations_path, class: "text-sm text-gray-500 hover:underline" %>
+
+<div id="messages" class="mt-4 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+  <% if @conversation.messages.empty? %>
+    <p class="text-sm text-gray-500">Ask a question about anything in your knowledge base.</p>
+  <% end %>
+  <%= render @conversation.messages %>
+</div>
+
+<div class="mt-4">
+  <%= render "messages/form", conversation: @conversation, message: @message %>
+</div>
