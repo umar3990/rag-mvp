@@ -8,6 +8,151 @@ messages). Newest on top. Archive older entries to
 
 ---
 
+## 2026-07-17 — Retrieval + generation: Phase 3's RAG core is functionally done
+
+- **Shipped `ChunkRetriever`**: embeds a question, queries `Chunk` scoped
+  to one organization first (never leaks another org's data even on a
+  perfect semantic match), ordered by pgvector cosine distance via
+  `neighbor`. Tests use hand-crafted orthogonal/opposite unit vectors for
+  deterministic ordering assertions, separate from testing whether
+  real embeddings are semantically sensible (not this code's job to
+  verify) — that was checked once by hand against real Ollama data
+  instead (return-policy question correctly ranked the return-policy
+  chunk closest).
+- **Decision, chat completion also local via Ollama**: no hosted provider
+  (Anthropic, OpenAI) has a genuinely free/no-card API tier — the paid
+  Claude.ai subscription is a separate product/billing system from the
+  API and doesn't grant API credits. Given the hard $0/no-card
+  constraint, extended the same exception already made for embeddings to
+  chat completion. Pulled `llama3.2:3b` (2GB) alongside
+  `nomic-embed-text` on the same native Ollama install. `CLAUDE.md`
+  updated in place (Stack + Deliberately-deferred sections) rather than
+  a separate ADR, since it's the same decision already recorded there
+  for embeddings, just extended.
+- **Shipped `ChatCompletionService`** (same shape as `EmbeddingService`,
+  posts to Ollama's `/api/chat`) and **`AnswerGenerator`**, which ties
+  both together: retrieve top-k chunks, check the closest match's cosine
+  distance against a threshold (0.6, a tunable judgment call, not a
+  formula) *before* calling the chat model, and only generate if
+  something's actually relevant — otherwise returns `escalated?: true`
+  with no LLM call spent. Sources come from the chunks *we* retrieved,
+  not the model's own citations, since that's the more trustworthy
+  approach for a flow with a human-approval step downstream.
+  Verified end-to-end by hand: a return-policy question got a grounded
+  answer citing the right document; an off-topic question (weather on
+  Mars) correctly escalated instead of hallucinating.
+- **Near-miss caught while smoke-testing**: an early test script did
+  `Organization.first` instead of creating an isolated test org, which
+  silently landed on the user's real dev organization (real uploaded
+  documents already in this dev DB) — a "Smoke Test" document briefly
+  existed there before being caught and deleted. Fixed by always
+  creating a throwaway `Organization` for manual smoke tests going
+  forward, never reusing `.first`.
+- **What's still not built**: Phase 3's pieces are all done at the
+  service layer (`EmbeddingService`, `ChunkRetriever`,
+  `ChatCompletionService`, `AnswerGenerator`), but there's no UI or
+  controller action calling `AnswerGenerator` yet — that's Phase 4 (the
+  chat interface), which doubles as the test surface before Gmail is
+  ever wired in per the phase plan.
+
+---
+
+## 2026-07-16 (cont. 5) — Ollama moved off Docker entirely, running native + persistent
+
+- **Pivot**: dropped Docker for Ollama. After reboot, Docker Desktop's own
+  VM disk came back corrupted (`input/output error` on overlay2, then
+  `error creating temporary lease` on the containerd metadata db) — a
+  fresh `docker compose down`/restart-Docker-Desktop cycle fixed the
+  daemon, but the resulting container still failed with
+  `exec format error` running `nomic-embed-text`, meaning the 2.66GB image
+  layer itself got corrupted mid-pull during the earlier crash despite
+  Docker reporting "Pull complete". Rather than debug Docker Desktop
+  further, switched to running Ollama natively.
+- **Installed**: the official prebuilt universal (x86_64 + arm64) binary
+  from `github.com/ollama/ollama` releases, unpacked to
+  `~/ollama-native/` — not the Homebrew bottle (Homebrew's `ollama` is
+  Intel-only on this machine and would run under Rosetta, same class of
+  problem as the Ruby arm64 saga; Ollama also needs native arm64 for
+  Metal GPU acceleration, which Rosetta can't provide).
+  `ollama pull nomic-embed-text` re-run natively (fast — no container
+  layer overhead), confirmed working via
+  `curl localhost:11434/api/embeddings`.
+- **Made persistent**: `~/Library/LaunchAgents/com.ollama.serve.plist`
+  (`RunAtLoad` + `KeepAlive`) — starts on login, restarts if killed.
+  Verified by manually killing the process and confirming launchd
+  respawned it within seconds. Logs at
+  `~/ollama-native/logs/ollama.{out,err}.log`.
+  `docker-compose.yml`'s `ollama`/`ollama-pull` services and the
+  `ollama_data` volume removed — Rails still talks to the same
+  `localhost:11434` either way, so no app code changes needed for this
+  pivot.
+- **Fixed a real bug found while smoke-testing**: `EmbeddingService.call`
+  raised `NameError: uninitialized constant Net::HTTP` — Rails
+  autoloading doesn't cover Ruby stdlib, needed explicit
+  `require "net/http"` / `require "json"` at the top of the file.
+- **Mid-session incident (self-inflicted, flagged to user)**: an abandoned
+  `brew uninstall ollama` attempt triggered Homebrew's default
+  `autoremove` and deleted 15 "orphaned" formulae (`llvm` 1.7GB,
+  `python@3.12`, `python@3.13`, `open-mpi`, `protobuf@29`, `z3`, `unbound`,
+  others) — Homebrew only tracks formula-to-formula deps, so anything the
+  user ran directly (not via a project's own venv/pyenv) is gone until
+  reinstalled. User hasn't confirmed yet whether any of these are needed
+  back.
+- **Next steps on resume**: `EmbeddingService.call` verified end-to-end
+  through `bin/rails runner`, returns a real 768-dim vector. Next real
+  increment is wiring it into `DocumentProcessingJob` for actual documents
+  (job already calls it per chunk per the previous entry) and testing
+  the full chunk → embed → vector-search flow, not just the isolated
+  service call.
+
+---
+
+## 2026-07-16 (cont. 4) — Embeddings: local via Ollama, $0 cost (IN PROGRESS, interrupted by Mac restart)
+
+- Decision: embeddings run locally via Ollama (`nomic-embed-text`, 768-dim)
+  instead of a paid API — cost-driven, discussed as a deliberate exception
+  to the "no local LLMs" deferral (that deferral was about chat models;
+  this is an embedding model, much lighter, and the driver is $0 cost).
+  Containerized into `docker-compose.yml` (not just a bare-metal local
+  install) so `docker-compose up` covers it, matching how `db` is already
+  run — Rails itself still runs on the host via `bin/rails server`, so it
+  reaches Ollama over HTTP at `localhost:11434`.
+- Shipped (code side, done): `docker-compose.yml` gained `ollama` (server)
+  + `ollama-pull` (one-shot `ollama pull nomic-embed-text`, safe to
+  re-run) services. `.env`/`.env.example`/`.env.test`/`.env.test.example`
+  gained `OLLAMA_URL` + `OLLAMA_EMBEDDING_MODEL`. Migration
+  `AddEmbeddingToChunks` (768-dim `vector` column via `neighbor`, run
+  against both dev and test DBs). `Chunk` model:
+  `has_neighbors :embedding, dimensions: 768`. New
+  `app/services/embedding_service.rb` (`EmbeddingService.call(text)` →
+  POSTs to Ollama's `/api/embeddings`, returns the float array).
+  `DocumentProcessingJob` now calls it per chunk before saving.
+- **Blocked**: `docker compose up -d ollama ollama-pull` hit an
+  `unexpected EOF` mid-pull first try (the `ollama/ollama` image is ~2.6GB,
+  bigger than expected), retried and that succeeded, but then the Docker
+  Desktop daemon itself stopped responding (`docker.sock` missing even
+  though some Docker processes were still alive) — reopening the app via
+  `open -a Docker` didn't visibly recover it in time, so the user is
+  rebooting the Mac to clear it up.
+- **Next steps on resume**: after reboot, confirm Docker Desktop is
+  healthy (`docker ps`), run `docker compose up -d ollama ollama-pull`
+  (should be fast now — the ~2.6GB image layers are already pulled and
+  cached locally), confirm the model pulled
+  (`docker compose logs ollama-pull`), then smoke-test
+  `EmbeddingService.call("test")` in `bin/rails console` against the
+  running container before trusting it inside `DocumentProcessingJob`.
+  Nothing about the Rails-side code needs to change — this is purely
+  "get the container running again."
+- Note: ran Rails commands in this session via
+  `GEM_HOME=~/.rvm/gems/ruby-3.3.4@rag-mvp`,
+  `GEM_PATH=$GEM_HOME:~/.rvm/gems/ruby-3.3.4@global`,
+  `PATH=~/.rvm/rubies/ruby-3.3.4/bin:$GEM_HOME/bin:$PATH` rather than
+  sourcing RVM's shell function — plain `rvm use` isn't available
+  non-interactively in this environment; bin/rails otherwise picks up the
+  wrong Ruby (system default 3.1.2, x86_64) and errors on gem resolution.
+
+---
+
 ## 2026-07-16 (cont. 3) — Retry mechanism, live status via Turbo Streams
 
 - Shipped: `retry_on`/`discard_on` on `DocumentProcessingJob` (transient

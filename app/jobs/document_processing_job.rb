@@ -44,7 +44,10 @@ class DocumentProcessingJob < ApplicationJob
     Chunk.transaction do
       document.chunks.destroy_all
       chunk_contents.each_with_index do |content, position|
-        document.chunks.create!(organization: document.organization, content: content, position: position)
+        embedding = EmbeddingService.call(content)
+        document.chunks.create!(
+          organization: document.organization, content: content, position: position, embedding: embedding
+        )
       end
     end
 
