@@ -10,6 +10,10 @@ Rails.application.routes.draw do
   resources :conversations, only: %i[ index create show ] do
     resources :messages, only: %i[ create ]
   end
+
+  # n8n's Gmail relay posts here -- :webhook_token both identifies and
+  # authenticates the organization in one step (see docs/webhook-contract.md).
+  post "webhooks/gmail/:webhook_token" => "gmail_webhooks#create", as: :gmail_webhook
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

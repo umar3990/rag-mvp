@@ -8,6 +8,51 @@ messages). Newest on top. Archive older entries to
 
 ---
 
+## 2026-07-17 (cont. 2) — Phase 5 start: webhook contract + idempotency
+
+- **Decided**: org identification for the inbound Gmail webhook is a
+  per-organization secret token in the URL
+  (`POST /webhooks/gmail/:webhook_token`), not a header + org id, not
+  anything parsed from the email itself — same pattern Stripe/GitHub use
+  for webhooks. `Organization#webhook_token` via Rails' `has_secure_token`.
+  Full reasoning + payload shape + response codes written up in the new
+  `docs/webhook-contract.md` (first real doc in that file, per the phase
+  plan's "write it when there's something real to document" rule).
+- **Idempotency key**: Gmail's `Message-Id` header, stored as
+  `messages.gmail_message_id` under a DB unique index — deliberately a
+  DB constraint, not just an application-level existence check, since
+  only the DB actually closes the race where two webhook deliveries for
+  the same email arrive close enough together to both pass an
+  existence check before either inserts.
+- **Schema**: `Conversation` gained `source` (web/email),
+  `from_email`, `gmail_thread_id` (unique per organization), and
+  `user_id` became optional (an email-originated conversation has no
+  app user until a human approves a reply — that step doesn't exist
+  yet). `Message` gained `gmail_message_id`.
+- **A real design conflict found by the test suite, not guessed at
+  design time**: first pass added a model-level `uniqueness` validation
+  on `gmail_thread_id` *in addition to* the DB unique index, reasoning
+  "defense in depth." That was wrong here specifically —
+  `GmailWebhooksController` uses `create_or_find_by!` (attempt insert,
+  fall back to find on a unique-index conflict) precisely so a second
+  email in an *existing* thread — the ordinary case, not a race — finds
+  the conversation instead of erroring. The blocking validation raised
+  before the DB was ever touched, so every normal second-email-in-a-thread
+  request 422'd. Removed the validation; the DB index is the only place
+  that invariant is enforced now. Two failing tests caught this
+  immediately once written.
+- **Shipped**: `GmailWebhooksController` (verify token → check required
+  fields → find-or-create the `Conversation` → write the inbound
+  `Message` immediately, audit-trail-first → enqueue
+  `InboundEmailProcessingJob` → respond fast) and that job as a
+  deliberate stub — generating the actual reply via `AnswerGenerator` is
+  scoped as the next increment, not this one.
+- **Not done yet**: the job doesn't call `AnswerGenerator` yet, there's
+  no approval UI, and nothing sends a reply. n8n itself also isn't set
+  up — this only covers the Rails side of the contract.
+
+---
+
 ## 2026-07-17 (cont.) — Phase 4: chat UI, and a real Rails association bug caught by actually looking
 
 - **Shipped**: `Conversation`/`Message`/`MessageSource` models

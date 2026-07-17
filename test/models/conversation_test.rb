@@ -12,4 +12,37 @@ class ConversationTest < ActiveSupport::TestCase
       conversation.destroy
     end
   end
+
+  test "web-sourced conversations don't need an email or Gmail thread id" do
+    conversation = Conversation.new(organization: organizations(:one), user: users(:one), source: :web)
+    assert conversation.valid?
+  end
+
+  test "email-sourced conversations require a from address and a Gmail thread id" do
+    conversation = Conversation.new(organization: organizations(:one), source: :email)
+    assert_not conversation.valid?
+    assert_includes conversation.errors[:from_email], "can't be blank"
+    assert_includes conversation.errors[:gmail_thread_id], "can't be blank"
+  end
+
+  test "email-sourced conversations don't need an app user" do
+    conversation = Conversation.new(
+      organization: organizations(:one), source: :email,
+      from_email: "customer@example.com", gmail_thread_id: "18abz9y3f2e1c0d4"
+    )
+    assert conversation.valid?
+  end
+
+  test "the same Gmail thread id is fine across different organizations" do
+    Conversation.create!(
+      organization: organizations(:one), source: :email,
+      from_email: "customer@example.com", gmail_thread_id: "shared-thread-id"
+    )
+
+    conversation = Conversation.new(
+      organization: organizations(:two), source: :email,
+      from_email: "someone-else@example.com", gmail_thread_id: "shared-thread-id"
+    )
+    assert conversation.valid?
+  end
 end
