@@ -2,6 +2,8 @@
 
 one:
   name: Acme Corp
+  webhook_token: acme-corp-test-webhook-token
 
 two:
   name: Globex Corp
+  webhook_token: globex-corp-test-webhook-token

@@ -19,4 +19,10 @@ class OrganizationTest < ActiveSupport::TestCase
     end
     assert_includes organizations(:one).errors[:base], "Cannot delete record because dependent users exist"
   end
+
+  test "generates a unique webhook token on create" do
+    organization = Organization.create!(name: "New Co")
+    assert organization.webhook_token.present?
+    assert_not_equal organizations(:one).webhook_token, organization.webhook_token
+  end
 end

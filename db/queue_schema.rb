@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_17_052822) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_17_091822) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -58,9 +58,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_052822) do
 
   create_table "conversations", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "from_email"
+    t.string "gmail_thread_id"
     t.bigint "organization_id", null: false
+    t.string "source", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
+    t.bigint "user_id"
+    t.index ["organization_id", "gmail_thread_id"], name: "index_conversations_on_organization_id_and_gmail_thread_id", unique: true
     t.index ["organization_id"], name: "index_conversations_on_organization_id"
     t.index ["user_id"], name: "index_conversations_on_user_id"
   end
@@ -91,16 +95,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_052822) do
     t.bigint "conversation_id", null: false
     t.datetime "created_at", null: false
     t.boolean "escalated", default: false, null: false
+    t.string "gmail_message_id"
     t.string "role", null: false
     t.datetime "updated_at", null: false
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
+    t.index ["gmail_message_id"], name: "index_messages_on_gmail_message_id", unique: true
   end
 
   create_table "organizations", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
     t.datetime "updated_at", null: false
+    t.string "webhook_token", null: false
     t.index ["name"], name: "index_organizations_on_name", unique: true
+    t.index ["webhook_token"], name: "index_organizations_on_webhook_token", unique: true
   end
 
   create_table "sessions", force: :cascade do |t|
