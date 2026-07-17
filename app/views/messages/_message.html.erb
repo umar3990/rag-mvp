@@ -1,0 +1,13 @@
+<div id="<%= dom_id(message) %>" class="flex <%= message.user? ? "justify-end" : "justify-start" %>">
+  <div class="max-w-lg rounded-lg px-4 py-3 text-sm
+    <%= message.user? ? "bg-gray-900 text-white" : message.escalated? ? "bg-amber-50 text-amber-900" : "bg-white border border-gray-200 text-gray-900" %>">
+    <p class="whitespace-pre-wrap"><%= message.content %></p>
+
+    <% if message.assistant? && message.source_documents.any? %>
+      <p class="mt-2 text-xs <%= message.escalated? ? "text-amber-700" : "text-gray-500" %>">
+        Sources:
+        <%= safe_join(message.source_documents.map { |document| link_to(document.title, document_path(document), class: "underline") }, ", ") %>
+      </p>
+    <% end %>
+  </div>
+</div>

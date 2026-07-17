@@ -198,8 +198,8 @@ Clean commit history.
 
 - [x] Phase 1 — Infrastructure
 - [x] Phase 2 — Core Rails platform (auth, User/Organization/Document)
-- [ ] Phase 3 — Knowledge base (upload → chunk → embed → search → RAG answer)
-- [ ] Phase 4 — Human-facing chat UI
+- [x] Phase 3 — Knowledge base (upload → chunk → embed → search → RAG answer)
+- [x] Phase 4 — Human-facing chat UI
 - [ ] Phase 5 — Automation pipeline (Gmail → n8n → Rails → agent → approval → send)
 - [ ] Phase 6 — Polish, deploy, write-up
 
