@@ -89,9 +89,13 @@ code.
   gem (already set up — Day 1)
 - Active Storage for document upload (knowledge base ingestion)
 - `pdf-reader` gem for text extraction
-- **One** LLM provider (Anthropic or OpenAI — decide before Phase 3,
-  embeddings need a real key). Multi-provider switching is explicitly
-  deferred, see below.
+- **One** LLM provider — decided: Ollama, running natively on the host
+  (not Docker — see notes.md), for both embeddings (`nomic-embed-text`)
+  and chat completion (`llama3.2:3b`). Cost-driven: a genuinely free,
+  no-card API tier doesn't exist at any hosted provider, so this is the
+  deliberate exception to "Local LLMs" below, extended from embeddings to
+  chat completion for the same reason. Multi-provider switching is
+  explicitly deferred, see below.
 - Hotwire/Turbo for the UI (human-approval screen, no separate frontend)
 - n8n (Docker) — thin trigger/relay only; Gmail → webhook. All decision
   logic lives in Rails, not n8n, so it's testable and lives in git.
@@ -119,8 +123,10 @@ code.
   call plus a confidence/escalate check, not an agentic loop with tools.
   Upgrade to tool-calling only after the simple version is working and its
   limits are actually felt.
-- **Local LLMs** — not until there's a concrete reason (cost, latency,
-  privacy) to need one.
+- **Local LLMs** — ~~not until there's a concrete reason (cost, latency,
+  privacy) to need one~~ superseded: cost turned out to be that concrete
+  reason for both embeddings and chat completion (see Stack above). Still
+  applies to anything beyond those two calls.
 
 ## Phase Plan
 

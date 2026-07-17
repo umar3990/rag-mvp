@@ -8,6 +8,55 @@ messages). Newest on top. Archive older entries to
 
 ---
 
+## 2026-07-17 — Retrieval + generation: Phase 3's RAG core is functionally done
+
+- **Shipped `ChunkRetriever`**: embeds a question, queries `Chunk` scoped
+  to one organization first (never leaks another org's data even on a
+  perfect semantic match), ordered by pgvector cosine distance via
+  `neighbor`. Tests use hand-crafted orthogonal/opposite unit vectors for
+  deterministic ordering assertions, separate from testing whether
+  real embeddings are semantically sensible (not this code's job to
+  verify) — that was checked once by hand against real Ollama data
+  instead (return-policy question correctly ranked the return-policy
+  chunk closest).
+- **Decision, chat completion also local via Ollama**: no hosted provider
+  (Anthropic, OpenAI) has a genuinely free/no-card API tier — the paid
+  Claude.ai subscription is a separate product/billing system from the
+  API and doesn't grant API credits. Given the hard $0/no-card
+  constraint, extended the same exception already made for embeddings to
+  chat completion. Pulled `llama3.2:3b` (2GB) alongside
+  `nomic-embed-text` on the same native Ollama install. `CLAUDE.md`
+  updated in place (Stack + Deliberately-deferred sections) rather than
+  a separate ADR, since it's the same decision already recorded there
+  for embeddings, just extended.
+- **Shipped `ChatCompletionService`** (same shape as `EmbeddingService`,
+  posts to Ollama's `/api/chat`) and **`AnswerGenerator`**, which ties
+  both together: retrieve top-k chunks, check the closest match's cosine
+  distance against a threshold (0.6, a tunable judgment call, not a
+  formula) *before* calling the chat model, and only generate if
+  something's actually relevant — otherwise returns `escalated?: true`
+  with no LLM call spent. Sources come from the chunks *we* retrieved,
+  not the model's own citations, since that's the more trustworthy
+  approach for a flow with a human-approval step downstream.
+  Verified end-to-end by hand: a return-policy question got a grounded
+  answer citing the right document; an off-topic question (weather on
+  Mars) correctly escalated instead of hallucinating.
+- **Near-miss caught while smoke-testing**: an early test script did
+  `Organization.first` instead of creating an isolated test org, which
+  silently landed on the user's real dev organization (real uploaded
+  documents already in this dev DB) — a "Smoke Test" document briefly
+  existed there before being caught and deleted. Fixed by always
+  creating a throwaway `Organization` for manual smoke tests going
+  forward, never reusing `.first`.
+- **What's still not built**: Phase 3's pieces are all done at the
+  service layer (`EmbeddingService`, `ChunkRetriever`,
+  `ChatCompletionService`, `AnswerGenerator`), but there's no UI or
+  controller action calling `AnswerGenerator` yet — that's Phase 4 (the
+  chat interface), which doubles as the test surface before Gmail is
+  ever wired in per the phase plan.
+
+---
+
 ## 2026-07-16 (cont. 5) — Ollama moved off Docker entirely, running native + persistent
 
 - **Pivot**: dropped Docker for Ollama. After reboot, Docker Desktop's own
