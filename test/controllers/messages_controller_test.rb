@@ -40,7 +40,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
 
     reply = @conversation.messages.assistant.order(:created_at).last
     assert reply.escalated?
-    assert_equal MessagesController::NO_CONFIDENT_ANSWER, reply.content
+    assert_equal ReplyGenerator::NO_CONFIDENT_ANSWER, reply.content
   end
 
   test "rejects a blank message without generating a reply" do

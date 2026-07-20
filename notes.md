@@ -8,6 +8,25 @@ messages). Newest on top. Archive older entries to
 
 ---
 
+## 2026-07-20 — Wired InboundEmailProcessingJob to AnswerGenerator
+
+- **Shipped**: extracted the "retrieve → generate → persist reply"
+  logic (previously inline in `MessagesController`) into a shared
+  `ReplyGenerator` service, since `InboundEmailProcessingJob` needed the
+  exact same step -- one "AI Agent step" per CLAUDE.md's Phase 5 plan,
+  two triggers (chat UI, inbound email), not two implementations.
+  `MessagesController` simplified to a single call;
+  `InboundEmailProcessingJob` is no longer a stub.
+- Verified with a real (non-stubbed) Ollama round trip via an isolated
+  temp organization, same discipline as previous sessions: real email
+  in → job → grounded draft reply with correct source citation, cleaned
+  up after.
+- **Still not built**: the draft reply is persisted but there's no
+  approval UI to see or act on it yet, and nothing sends a reply via
+  Gmail. Those are the next two increments.
+
+---
+
 ## 2026-07-17 (cont. 2) — Phase 5 start: webhook contract + idempotency
 
 - **Decided**: org identification for the inbound Gmail webhook is a
