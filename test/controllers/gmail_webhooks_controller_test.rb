@@ -71,4 +71,30 @@ class GmailWebhooksControllerTest < ActionDispatch::IntegrationTest
     assert_not organizations(:one).conversations.exists?(gmail_thread_id: @valid_params[:thread_id])
     assert_equal organizations(:two), conversation.organization
   end
+
+  test "the enqueued job actually generates and persists a draft reply" do
+    stub_embedding(unit_vector(0)) do
+      perform_enqueued_jobs do
+        post gmail_webhook_path(@organization.webhook_token), params: @valid_params
+      end
+    end
+
+    conversation = @organization.conversations.find_by!(gmail_thread_id: @valid_params[:thread_id])
+    reply = conversation.messages.assistant.order(:created_at).last
+    assert reply.escalated?
+  end
+
+  private
+
+  def unit_vector(index)
+    Array.new(768, 0.0).tap { |v| v[index] = 1.0 }
+  end
+
+  def stub_embedding(vector)
+    original_method = EmbeddingService.method(:call)
+    EmbeddingService.define_singleton_method(:call) { |*| vector }
+    yield
+  ensure
+    EmbeddingService.define_singleton_method(:call, original_method)
+  end
 end
