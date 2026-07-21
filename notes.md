@@ -8,6 +8,42 @@ messages). Newest on top. Archive older entries to
 
 ---
 
+## 2026-07-22 — Outbound send contract: Rails → n8n
+
+- **Decided before building**: n8n owns the actual Gmail send API call,
+  not Rails. Rails POSTs to a second, org-specific n8n webhook when a
+  draft is approved (`OutboundEmailService` via `SendApprovedReplyJob`,
+  enqueued from `MessageReviewsController#approve`); n8n reuses the same
+  Gmail credential it already needs to watch the inbox. Rails never
+  holds Gmail OAuth at all -- keeps "n8n stays thin" consistent (sending
+  an already-approved reply is mechanical plumbing, not a decision) and
+  avoids a second OAuth integration living in this app.
+  `docs/webhook-contract.md` now documents both directions.
+- **Shipped**: `Organization#n8n_send_webhook_url` /
+  `#n8n_send_webhook_secret` (per-org config, both nullable -- no real
+  n8n send-workflow exists yet to point at). `Message#sent_at` guards a
+  retried `SendApprovedReplyJob` against sending the same reply twice,
+  same idempotency shape as the inbound side, just the other direction.
+- **Honesty check on what's actually verified**: tested via WebMock
+  stubs asserting Rails builds and sends the *correct* HTTP request
+  (payload shape, `X-Webhook-Token` header) -- there's no real n8n
+  instance to round-trip against, so that part stays unverified until a
+  real send-workflow exists. No browser re-check this session: this
+  change has no new UI surface (approving already worked in the
+  browser; it now additionally enqueues a job), so the automated
+  WebMock coverage is the right level of verification here, not a
+  redundant screenshot pass.
+- **Where Phase 5 actually stands**: every piece buildable in this
+  codebase is done -- inbound webhook + idempotency, AI Agent step,
+  human approval, outbound contract. What's left is entirely outside
+  Rails: a Google Cloud OAuth client for n8n's Gmail credential, and
+  the real n8n workflows (inbound watch + outbound send) configured
+  against `docs/webhook-contract.md`. Not something achievable via code
+  changes here -- flagging as the actual remaining work, not silently
+  marking Phase 5 done.
+
+---
+
 ## 2026-07-21 — Human-approval UI (Reviews)
 
 - **Design decided before building**: collapsed the phase plan's
