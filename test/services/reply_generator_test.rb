@@ -34,6 +34,38 @@ class ReplyGeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  test "web-sourced replies have no review status -- they show directly to the user asking" do
+    stub_embedding(unit_vector(0)) do
+      reply = ReplyGenerator.call(conversation: @conversation, question: "What's the weather like on Mars?")
+      assert_nil reply.review_status
+    end
+  end
+
+  test "email-sourced replies are always pending review, confident or escalated" do
+    email_conversation = Conversation.create!(
+      organization: organizations(:one), source: :email,
+      from_email: "customer@example.com", gmail_thread_id: "18abz9y3f2e1c0d4"
+    )
+
+    stub_embedding(unit_vector(0)) do
+      escalated_reply = ReplyGenerator.call(conversation: email_conversation, question: "What's the weather like on Mars?")
+      assert escalated_reply.review_status_pending?
+    end
+
+    Chunk.create!(
+      document: documents(:one), organization: organizations(:one),
+      content: "Returns are accepted within 30 days of purchase with a receipt.", position: 101,
+      embedding: unit_vector(0)
+    )
+
+    stub_embedding(unit_vector(0)) do
+      stub_chat("Returns are accepted within 30 days.") do
+        grounded_reply = ReplyGenerator.call(conversation: email_conversation, question: "What's the return policy?")
+        assert grounded_reply.review_status_pending?
+      end
+    end
+  end
+
   private
 
   def unit_vector(index)

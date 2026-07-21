@@ -8,6 +8,44 @@ messages). Newest on top. Archive older entries to
 
 ---
 
+## 2026-07-21 — Human-approval UI (Reviews)
+
+- **Design decided before building**: collapsed the phase plan's
+  "approve as-is / edit / reject / escalate" to three actions --
+  Approve, Edit & Approve (the same action: the form always submits
+  whatever's in the content field, edited or not), and Reject.
+  "Escalate" was dropped as its own action since there's no team
+  hierarchy to escalate *to* yet with a single user role -- the
+  existing `escalated?` flag already routes low-confidence replies to a
+  human by default (nothing auto-sends regardless). No timeout
+  automation either -- a pending draft just sits until someone looks;
+  revisit only if that's a real problem later.
+- **Shipped**: `Message` gained `review_status`
+  (pending/approved/rejected, nil for web-sourced chat replies -- those
+  show directly to the user asking, no review applies), `reviewed_by`,
+  `reviewed_at`. `ReplyGenerator` now sets every email-sourced reply to
+  `pending` regardless of `escalated?` -- confident or not, a real
+  customer never gets an unreviewed answer. `MessageReviewsController`
+  (`/reviews`) lists an org's pending drafts with the customer's
+  question, editable draft content, source citations, and an
+  escalation badge for context.
+- **Real bug caught only by the required browser check, not by the
+  test suite**: the Reject button (`button_to`, which renders its own
+  `<form>`) was nested inside the Approve `form_with` block. Nested
+  `<form>` elements are invalid HTML -- the browser collapses them, so
+  clicking Reject actually submitted the enclosing Approve form
+  instead. Every controller test passed anyway, because
+  `patch reject_review_path(...)` hits the route directly and never
+  parses real HTML -- exactly the class of bug this project's working
+  agreement requires a browser check for. Fixed by moving the Reject
+  button to a sibling of the Approve form, not a child (buttons now
+  stack vertically instead of side-by-side -- a minor layout tradeoff
+  for correctness).
+- **Not done yet**: approved drafts don't actually send via Gmail yet
+  (no Gmail API integration exists) -- that's the last piece of Phase 5.
+
+---
+
 ## 2026-07-20 — Wired InboundEmailProcessingJob to AnswerGenerator
 
 - **Shipped**: extracted the "retrieve → generate → persist reply"
