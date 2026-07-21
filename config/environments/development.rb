@@ -31,6 +31,14 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
+  # Rails' host-authorization middleware 403s any request whose Host
+  # header isn't on an allowed list -- localhost/127.0.0.1 by default.
+  # n8n runs in Docker and reaches the host via `host.docker.internal`,
+  # so its webhook calls need that host explicitly allowed too, or every
+  # request from n8n gets rejected before it ever reaches
+  # GmailWebhooksController.
+  config.hosts << "host.docker.internal:3000"
+
   # Default :async adapter (in-process thread pool, no separate worker
   # process needed) -- `bin/jobs`/real Solid Queue hit a segfault in the
   # native pg gem under concurrent connections on this machine. Deferred,
