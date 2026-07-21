@@ -10,6 +10,12 @@ Rails.application.routes.draw do
   resources :conversations, only: %i[ index create show ] do
     resources :messages, only: %i[ create ]
   end
+  resources :reviews, only: %i[ index ], controller: "message_reviews" do
+    member do
+      patch :approve
+      patch :reject
+    end
+  end
 
   # n8n's Gmail relay posts here -- :webhook_token both identifies and
   # authenticates the organization in one step (see docs/webhook-contract.md).

@@ -1,0 +1,12 @@
+<% content_for :title, "Reviews" %>
+
+<h1 class="text-lg font-semibold text-gray-900">Reviews</h1>
+<p class="mt-1 text-sm text-gray-500">Draft replies to inbound emails, waiting for approval.</p>
+
+<div class="mt-6 space-y-4">
+  <% if @messages.empty? %>
+    <p class="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-500">Nothing pending review.</p>
+  <% end %>
+
+  <%= render partial: "review", collection: @messages, as: :message %>
+</div>
