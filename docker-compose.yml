@@ -15,8 +15,23 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
+  # Thin trigger/relay only -- watches Gmail, calls Rails' webhook; all
+  # decision logic stays in Rails, not in n8n's workflow config. See
+  # docs/n8n-gmail-setup.md for the one-time manual setup (Google Cloud
+  # OAuth client, the actual workflows) this container alone doesn't do.
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      N8N_SECURE_COOKIE: "false" # fine for http://localhost; would need true behind real HTTPS
+    volumes:
+      - n8n_data:/home/node/.n8n
+
 volumes:
   db_data:
+  n8n_data:
 
 # Embeddings: Ollama is intentionally NOT run here. It runs as a native
 # arm64 binary + launchd service on the host instead -- see notes.md
