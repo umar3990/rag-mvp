@@ -37,8 +37,10 @@ class MessageReviewsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match other_reply.content, response.body
   end
 
-  test "approve updates content, marks approved, and records the reviewer" do
-    patch approve_review_path(@reply), params: { content: "Edited: returns within 30 days with a receipt." }
+  test "approve updates content, marks approved, records the reviewer, and enqueues sending" do
+    assert_enqueued_with(job: SendApprovedReplyJob) do
+      patch approve_review_path(@reply), params: { content: "Edited: returns within 30 days with a receipt." }
+    end
 
     @reply.reload
     assert_equal "Edited: returns within 30 days with a receipt.", @reply.content

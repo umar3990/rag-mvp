@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_21_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -100,6 +100,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_21_000001) do
     t.datetime "reviewed_at"
     t.bigint "reviewed_by_id"
     t.string "role", null: false
+    t.datetime "sent_at"
     t.datetime "updated_at", null: false
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
     t.index ["gmail_message_id"], name: "index_messages_on_gmail_message_id", unique: true
@@ -108,6 +109,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_21_000001) do
 
   create_table "organizations", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "n8n_send_webhook_secret"
+    t.string "n8n_send_webhook_url"
     t.string "name", null: false
     t.datetime "updated_at", null: false
     t.string "webhook_token", null: false

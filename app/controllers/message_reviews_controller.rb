@@ -16,6 +16,7 @@ class MessageReviewsController < ApplicationController
       content: params.require(:content),
       review_status: :approved, reviewed_by: Current.session.user, reviewed_at: Time.current
     )
+    SendApprovedReplyJob.perform_later(@message)
     redirect_to reviews_path, notice: "Approved."
   end
 
